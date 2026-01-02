@@ -430,11 +430,31 @@ function switchSeries(series, btn) {
             });
         }
 
-        const now = new Date();
-        const dateEl = document.getElementById('today-date');
-        if (dateEl) {
-            dateEl.innerText = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
-        }
+        // window.onload の中の日付表示部分を以下に書き換え
+window.onload = () => {
+    // --- 省略（保存データの復元などはそのまま） ---
+
+    // 現在の時刻を取得
+    const now = new Date();
+    
+    // 【12時間遅らせる処理】
+    // 現在の時刻から 12 * 60 * 60 * 1000 ミリ秒を引きます
+    const offsetTime = new Date(now.getTime() - (12 * 60 * 60 * 1000));
+
+    // 年・月・日をバラバラに取得
+    const year = offsetTime.getFullYear();
+    const month = offsetTime.getMonth() + 1; // 月は0から始まるので+1
+    const date = offsetTime.getDate();
+
+    // 「2026年1月1日」の形式で表示
+    const dateText = `${year}年${month}月${date}日`;
+    
+    const dateEl = document.getElementById('today-date');
+    if (dateEl) {
+        dateEl.innerText = dateText;
+    }
+};
+
 
         renderFurniture();
        
