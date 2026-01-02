@@ -271,32 +271,29 @@
 
 
 <script>
-
-
-// 増やしたいときはここに追加するだけ！
+// --- 家具データの設定 ---
 const furnitureData = {
-    "マーメイドシリーズ": ["チェア", "テーブル", "ドレッサー", "シェルフ", "スクリーン"],
-    "アンティークシリーズ": ["机", "イス", "時計", "電話"],
-    "こおりシリーズ": ["テーブル", "チェア", "カウンター"]
+    "マーメイド": ["チェア", "テーブル", "ドレッサー", "シェルフ", "スクリーン"],
+    "アンティーク": ["机", "イス", "時計", "電話"],
+    "こおり": ["テーブル", "チェア", "カウンター"]
 };
 
+// --- 家具リストの自動生成 ---
 function renderFurniture() {
     const tabContainer = document.getElementById('series-tabs');
     const listContainer = document.getElementById('furniture-list-container');
-    
+    if (!tabContainer || !listContainer) return;
+
     tabContainer.innerHTML = '';
     listContainer.innerHTML = '';
 
-    // データの数だけループして「タブ」と「リスト」を作る
     Object.keys(furnitureData).forEach((series, index) => {
-        // 1. タブボタンの作成
         const btn = document.createElement('button');
         btn.className = `tab-btn ${index === 0 ? 'active' : ''}`;
         btn.innerText = series;
         btn.onclick = () => switchSeries(series, btn);
         tabContainer.appendChild(btn);
 
-        // 2. リストカードの作成（最初は最初のシリーズ以外非表示）
         const card = document.createElement('div');
         card.id = `series-card-${series}`;
         card.className = 'card series-card';
@@ -316,140 +313,105 @@ function renderFurniture() {
     });
 }
 
-// タブを切り替える関数
 function switchSeries(series, btn) {
-    // 全カードを隠す
     document.querySelectorAll('.series-card').forEach(c => c.style.display = 'none');
-    // 選んだカードだけ出す
-    document.getElementById(`series-card-${series}`).style.display = 'block';
-    
-    // 全ボタンのactiveを外す
+    const target = document.getElementById(`series-card-${series}`);
+    if (target) target.style.display = 'block';
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    // 押したボタンにactiveをつける
     btn.classList.add('active');
 }
 
+// --- ページ切り替え機能 ---
+function showPage(pageId, element) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById(pageId);
+    if (target) target.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if (element) element.classList.add('active');
+}
 
-
-
-
-
-// --- ページ切り替え機能（より確実に動く版） ---
-    function showPage(pageId, element) {
-        // 全ページを非表示にする
-        const pages = document.querySelectorAll('.page');
-        pages.forEach(p => p.classList.remove('active'));
-        
-        // 指定したページを表示する
-        const targetPage = document.getElementById(pageId);
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-
-        // ナビゲーションの見た目を更新
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(n => n.classList.remove('active'));
-        if (element) {
-            element.classList.add('active');
-        }
+// --- カウントアップ機能 ---
+let counts = { fossil: 0 };
+function changeCount(id, delta) {
+    counts[id] = (counts[id] + delta) % 6;
+    const display = document.getElementById(`${id}-count`);
+    if (display) {
+        display.innerText = `${counts[id]}/5`;
+        if (counts[id] === 5) display.classList.add('count-finished');
+        else display.classList.remove('count-finished');
     }
+    saveStates();
+}
 
-    // --- カウントアップ機能 ---
-    let counts = { fossil: 0 };
-    function changeCount(id, delta) {
-        counts[id] = (counts[id] + delta) % 6;
-        const display = document.getElementById(`${id}-count`);
-        if (display) {
-            display.innerText = `${counts[id]}/5`;
-            if (counts[id] === 5) display.classList.add('count-finished');
-            else display.classList.remove('count-finished');
-        }
-        saveStates();
-    }
+// --- ストップウォッチ機能 ---
+let startTime, timerInterval, elapsedTime = 0;
+function startTimer() {
+    if (timerInterval) return;
+    startTime = Date.now() - elapsedTime;
+    timerInterval = setInterval(() => {
+        elapsedTime = Date.now() - startTime;
+        const totalSeconds = Math.floor(elapsedTime / 1000);
+        const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        const timerDisplay = document.getElementById('timer');
+        if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
+    }, 100);
+}
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
 
-    // --- ストップウォッチ機能（安定版） ---
-    let startTime, timerInterval, elapsedTime = 0;
-    
-    function startTimer() {
-        if (timerInterval) return;
-        startTime = Date.now() - elapsedTime;
-        timerInterval = setInterval(() => {
-            elapsedTime = Date.now() - startTime;
-            const totalSeconds = Math.floor(elapsedTime / 1000);
-            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-            const s = (totalSeconds % 60).toString().padStart(2, '0');
-            const timerDisplay = document.getElementById('timer');
-            if (timerDisplay) {
-                timerDisplay.innerText = `${m}:${s}`;
-            }
-        }, 100);
-    }
-
-    function stopTimer() {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-
-    // --- データの保存と読み込み ---
-    function saveStates() {
-        const states = {
-            checks: {},
-            counts: counts
-        };
-        document.querySelectorAll('.save-state').forEach(el => {
-            states.checks[el.id] = el.checked;
-        });
-        localStorage.setItem('acnh_app_data', JSON.stringify(states));
-
-        
-    }
-
-    document.addEventListener('change', (e) => {
-        if (e.target.classList.contains('save-state')) saveStates();
+// --- データの保存と読み込み ---
+function saveStates() {
+    const states = { checks: {}, counts: counts };
+    document.querySelectorAll('.save-state').forEach(el => {
+        if (el.id) states.checks[el.id] = el.checked;
     });
+    localStorage.setItem('acnh_app_data', JSON.stringify(states));
+}
 
-    window.onload = () => {
-        const savedRaw = localStorage.getItem('acnh_app_data');
-        const saved = savedRaw ? JSON.parse(savedRaw) : {};
-        
-        if (saved.checks) {
-            Object.keys(saved.checks).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.checked = saved.checks[id];
-            });
-        }
-        
-        if (saved.counts) {
-            counts = saved.counts;
-            Object.keys(counts).forEach(id => {
-                const display = document.getElementById(`${id}-count`);
-                if (display) {
-                    display.innerText = `${counts[id]}/5`;
-                    if (counts[id] === 5) display.classList.add('count-finished');
-                }
-                
-                
-    // 現在の時刻を取得
+// 読み込み時の処理
+window.onload = () => {
+    // 1. 家具リストを生成
+    renderFurniture();
+
+    // 2. 保存データの復元
+    const savedRaw = localStorage.getItem('acnh_app_data');
+    const saved = savedRaw ? JSON.parse(savedRaw) : {};
+    
+    if (saved.checks) {
+        Object.keys(saved.checks).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = saved.checks[id];
+        });
+    }
+    
+    if (saved.counts) {
+        counts = saved.counts;
+        Object.keys(counts).forEach(id => {
+            const display = document.getElementById(`${id}-count`);
+            if (display) {
+                display.innerText = `${counts[id]}/5`;
+                if (counts[id] === 5) display.classList.add('count-finished');
+            }
+        });
+    }
+
+    // 3. 日付の表示（12時間遅らせる）
     const now = new Date();
-    
-    // 【12時間遅らせる処理】
-    // 現在の時刻から 12 * 60 * 60 * 1000 ミリ秒を引きます
     const offsetTime = new Date(now.getTime() - (12 * 60 * 60 * 1000));
-
-    // 年・月・日をバラバラに取得
     const year = offsetTime.getFullYear();
-    const month = offsetTime.getMonth() + 1; // 月は0から始まるので+1
+    const month = offsetTime.getMonth() + 1;
     const date = offsetTime.getDate();
-
-    // 「2026年1月1日」の形式で表示
-    const dateText = `${year}年${month}月${date}日`;
-    
     const dateEl = document.getElementById('today-date');
     if (dateEl) {
-        dateEl.innerText = dateText;
+        dateEl.innerText = `${year}年${month}月${date}日`;
     }
+};
 
-        renderFurniture();
-       
-    };
+// チェックボックスが変更されたら保存
+document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('save-state')) saveStates();
+});
 </script>
