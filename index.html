@@ -373,13 +373,48 @@ function saveStates() {
 
 // 読み込み時の処理
 window.onload = () => {
+
     // 1. 家具リストを生成
     renderFurniture();
 
-    // 2. 保存データの復元
-    const savedRaw = localStorage.getItem('acnh_app_data');
-    const saved = savedRaw ? JSON.parse(savedRaw) : {};
+    // 2. 日付の計算（12時間遅らせる）
+    const now = new Date();
+    const offsetTime = new Date(now.getTime() - (12 * 60 * 60 * 1000));
+    const year = offsetTime.getFullYear();
+    const month = offsetTime.getMonth() + 1;
+    const date = offsetTime.getDate();
+    const todayStr = `${year}-${month}-${date}`; // 比較用の文字列（2026-1-1形式）
+
+    // 画面表示用のテキスト
+    const dateEl = document.getElementById('today-date');
+    if (dateEl) {
+        dateEl.innerText = `${year}年${month}月${date}日`;
+    }
+
+    // 3. 日付が変わったかチェックしてリセット判定
+    const lastOpenedDate = localStorage.getItem('last_opened_date');
     
+    // 保存データ読み込み
+    const savedRaw = localStorage.getItem('acnh_app_data');
+    let saved = savedRaw ? JSON.parse(savedRaw) : { checks: {}, counts: { fossil: 0 } };
+
+    // 【重要】前回と今日の日付が違えば、日課データのみリセット
+    if (lastOpenedDate && lastOpenedDate !== todayStr) {
+        // checksの中から、家具以外のID（check-で始まるものなど）をリセット
+        // 今回は「家具（furn-）」以外をすべてリセットする設定にします
+        Object.keys(saved.checks).forEach(id => {
+            if (!id.startsWith('furn-')) {
+                saved.checks[id] = false;
+            }
+        });
+        // カウントもリセット
+        saved.counts = { fossil: 0 };
+    }
+
+    // 今日の日付を保存（次の起動時に比較するため）
+    localStorage.setItem('last_opened_date', todayStr);
+
+    // 4. 保存データの復元（リセット後のデータ、または前回のデータ）
     if (saved.checks) {
         Object.keys(saved.checks).forEach(id => {
             const el = document.getElementById(id);
@@ -397,21 +432,6 @@ window.onload = () => {
             }
         });
     }
-
-    // 3. 日付の表示（12時間遅らせる）
-    const now = new Date();
-    const offsetTime = new Date(now.getTime() - (12 * 60 * 60 * 1000));
-    const year = offsetTime.getFullYear();
-    const month = offsetTime.getMonth() + 1;
-    const date = offsetTime.getDate();
-    const dateEl = document.getElementById('today-date');
-    if (dateEl) {
-        dateEl.innerText = `${year}年${month}月${date}日`;
-    }
 };
 
-// チェックボックスが変更されたら保存
-document.addEventListener('change', (e) => {
-    if (e.target.classList.contains('save-state')) saveStates();
-});
 </script>
