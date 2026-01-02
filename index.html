@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACNH Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #5ec4b6;    /* あつ森グリーン */
+            --accent: #ffab91;     /* コーラルオレンジ */
+            --bg: #f8f9fa;         /* 薄いグレー（Google風） */
+            --card: #ffffff;       /* 白 */
+            --text: #5a5a5a;       /* 文字色 */
+            --border: #edf2f7;     /* 線の色 */
+        }
+
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding-bottom: 90px; /* ナビが被らないための余白 */
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        /* ページの切り替え管理 */
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        header h1 {
+            font-size: 1.4rem;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* カードデザイン */
+        .card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
+        /* ストップウォッチ専用 */
+        .timer-card { text-align: center; }
+        #timer {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        /* リストの各項目 */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: 0.2s;
+            border-radius: 12px;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:active { background-color: #f0f0f0; transform: scale(0.98); }
+
+        /* カウント表示 */
+        .count-num {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .count-finished {
+            color: #ccc !important;
+            text-decoration: line-through;
+        }
+
+        /* ボタン */
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn {
+            border: none; border-radius: 30px; padding: 10px 25px;
+            font-weight: bold; cursor: pointer; font-family: inherit;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: var(--accent); color: white; }
+
+        /* 下部ナビゲーション */
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; max-width: 500px; height: 75px;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1px solid var(--border);
+            z-index: 100;
+        }
+        .nav-item { color: #a0aec0; font-size: 0.8rem; text-align: center; cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-icon { font-size: 1.5rem; display: block; }
+
+        /* 子項目のテキストを少し小さく、薄くする */
+        .child-items .list-item span {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        /* --- タブのデザイン --- */
+.tabs-container {
+    display: flex;
+    overflow-x: auto; /* 横スクロール可能に */
+    white-space: nowrap;
+    padding: 10px 0;
+    margin-bottom: 15px;
+    gap: 8px;
+    scrollbar-width: none; /* Firefox用：スクロールバー隠す */
+}
+.tabs-container::-webkit-scrollbar { display: none; } /* Chrome/Safari用 */
+
+.tab-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: #eee;
+    border: none;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    color: #888;
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+    font-weight: bold;
+}
+    </style>
+</head>
+<body>
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container">
+    
+    <section id="daily" class="page active">
+        <header><h1 id="today-date">2026.01.02</h1></header>
+
+        <div class="card timer-card">
+            <div id="timer">00:00</div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="startTimer()">開始</button>
+                <button class="btn btn-secondary" onclick="stopTimer()">停止</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">☀️ 今日の日課</h3>
+            <div id="todo-list">
+                <label class="list-item">
+                    <span>📱 ポータルログイン</span>
+                    <input type="checkbox" class="save-state" id="check-portal">
+                </label>
+                
+                <div class="list-item" onclick="changeCount('fossil', 1)">
+                    <div style="display:flex; flex-direction:column;">
+                        <span>🦴 化石掘り</span>
+                    </div>
+                    <span id="fossil-count" class="count-num">0/5</span>
+                </div>
+
+                
+                <label class="list-item">
+                    <span>✉️ メッセージボトル</span>
+                    <input type="checkbox" class="save-state" id="check-message">
+                </label>
+                <label class="list-item">
+                    <span>🔨 住民レシピ</span>
+                    <input type="checkbox" class="save-state" id="check-recipe">
+                </label>
+                <label class="list-item">
+                    <span>🌲 木揺らし</span>
+                    <input type="checkbox" class="save-state" id="check-tree">
+                </label>
+                <label class="list-item">
+                    <span>💧 水やり</span>
+                    <input type="checkbox" class="save-state" id="check-rock">
+                </label>
+
+                    <label class="list-item">
+                        <span>🛍️ 買い物</span>
+                    </label>
+    
+                    <div class="child-items" style="padding-left: 20px;">
+                        <label class="list-item">
+                            <span>たぬきち商店</span>
+                            <input type="checkbox" class="save-state child-check" id="shop-tanuki">
+                        </label>
+                        <label class="list-item">
+                            <span>エイブルシスターズ</span>
+                            <input type="checkbox" class="save-state child-check" id="shop-able">
+                        </label>
+                        <label class="list-item">
+                            <span>パニーの島</span>
+                            <input type="checkbox" class="save-state child-check" id="shop-parny">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="collection" class="page">
+    <header><h1>📦 コレクション</h1></header>
+    
+    <div id="series-tabs" class="tabs-container">
+        </div>
+
+    <div id="furniture-list-container">
+        </div>
+    </section>
+
+    <section id="stats" class="page">
+        <header><h1>📊 プレイ記録</h1></header>
+        <div class="card">
+            <p style="text-align:center; color:#ccc; padding:40px 0;">ここにカレンダーを表示予定</p>
+        </div>
+    </section>
+
+</div>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="showPage('daily', this)">
+        <span class="nav-icon">📅</span>日課
+    </div>
+    <div class="nav-item" onclick="showPage('collection', this)">
+        <span class="nav-icon">🛋️</span>家具
+    </div>
+    <div class="nav-item" onclick="showPage('stats', this)">
+        <span class="nav-icon">📈</span>記録
+    </div>
+</nav>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+// 増やしたいときはここに追加するだけ！
+const furnitureData = {
+    "マーメイドシリーズ": ["チェア", "テーブル", "ドレッサー", "シェルフ", "スクリーン"],
+    "アンティークシリーズ": ["机", "イス", "時計", "電話"],
+    "こおりシリーズ": ["テーブル", "チェア", "カウンター"]
+};
+
+function renderFurniture() {
+    const tabContainer = document.getElementById('series-tabs');
+    const listContainer = document.getElementById('furniture-list-container');
+    
+    tabContainer.innerHTML = '';
+    listContainer.innerHTML = '';
+
+    // データの数だけループして「タブ」と「リスト」を作る
+    Object.keys(furnitureData).forEach((series, index) => {
+        // 1. タブボタンの作成
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.innerText = series;
+        btn.onclick = () => switchSeries(series, btn);
+        tabContainer.appendChild(btn);
+
+        // 2. リストカードの作成（最初は最初のシリーズ以外非表示）
+        const card = document.createElement('div');
+        card.id = `series-card-${series}`;
+        card.className = 'card series-card';
+        card.style.display = index === 0 ? 'block' : 'none';
+        
+        let html = `<h4 style="color:var(--accent); margin-top:0;">${series}シリーズ</h4>`;
+        furnitureData[series].forEach(item => {
+            const id = `furn-${series}-${item}`;
+            html += `
+                <label class="list-item">
+                    <span>${item}</span>
+                    <input type="checkbox" class="save-state" id="${id}">
+                </label>`;
+        });
+        card.innerHTML = html;
+        listContainer.appendChild(card);
+    });
+}
+
+// タブを切り替える関数
+function switchSeries(series, btn) {
+    // 全カードを隠す
+    document.querySelectorAll('.series-card').forEach(c => c.style.display = 'none');
+    // 選んだカードだけ出す
+    document.getElementById(`series-card-${series}`).style.display = 'block';
+    
+    // 全ボタンのactiveを外す
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    // 押したボタンにactiveをつける
+    btn.classList.add('active');
+}
+
+
+
+
+
+
+// --- ページ切り替え機能（より確実に動く版） ---
+    function showPage(pageId, element) {
+        // 全ページを非表示にする
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(p => p.classList.remove('active'));
+        
+        // 指定したページを表示する
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+            targetPage.classList.add('active');
+        }
+
+        // ナビゲーションの見た目を更新
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(n => n.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+        }
+    }
+
+    // --- カウントアップ機能 ---
+    let counts = { fossil: 0 };
+    function changeCount(id, delta) {
+        counts[id] = (counts[id] + delta) % 6;
+        const display = document.getElementById(`${id}-count`);
+        if (display) {
+            display.innerText = `${counts[id]}/5`;
+            if (counts[id] === 5) display.classList.add('count-finished');
+            else display.classList.remove('count-finished');
+        }
+        saveStates();
+    }
+
+    // --- ストップウォッチ機能（安定版） ---
+    let startTime, timerInterval, elapsedTime = 0;
+    
+    function startTimer() {
+        if (timerInterval) return;
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(() => {
+            elapsedTime = Date.now() - startTime;
+            const totalSeconds = Math.floor(elapsedTime / 1000);
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            const timerDisplay = document.getElementById('timer');
+            if (timerDisplay) {
+                timerDisplay.innerText = `${m}:${s}`;
+            }
+        }, 100);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // --- データの保存と読み込み ---
+    function saveStates() {
+        const states = {
+            checks: {},
+            counts: counts
+        };
+        document.querySelectorAll('.save-state').forEach(el => {
+            states.checks[el.id] = el.checked;
+        });
+        localStorage.setItem('acnh_app_data', JSON.stringify(states));
+
+        
+    }
+
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('save-state')) saveStates();
+    });
+
+    window.onload = () => {
+        const savedRaw = localStorage.getItem('acnh_app_data');
+        const saved = savedRaw ? JSON.parse(savedRaw) : {};
+        
+        if (saved.checks) {
+            Object.keys(saved.checks).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = saved.checks[id];
+            });
+        }
+        
+        if (saved.counts) {
+            counts = saved.counts;
+            Object.keys(counts).forEach(id => {
+                const display = document.getElementById(`${id}-count`);
+                if (display) {
+                    display.innerText = `${counts[id]}/5`;
+                    if (counts[id] === 5) display.classList.add('count-finished');
+                }
+            });
+        }
+
+        const now = new Date();
+        const dateEl = document.getElementById('today-date');
+        if (dateEl) {
+            dateEl.innerText = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+        }
+
+        renderFurniture();
+       
+    };
+</script>
