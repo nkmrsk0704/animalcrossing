@@ -427,9 +427,8 @@ function switchSeries(series, btn) {
                     display.innerText = `${counts[id]}/5`;
                     if (counts[id] === 5) display.classList.add('count-finished');
                 }
-            });
-        }
-
+                
+                
     // 現在の時刻を取得
     const now = new Date();
     
@@ -449,8 +448,6 @@ function switchSeries(series, btn) {
     if (dateEl) {
         dateEl.innerText = dateText;
     }
-};
-
 
         renderFurniture();
        
